@@ -1,12 +1,13 @@
 const express = require('express');
 const { json } = require('express');
 const { connect, Schema, model } = require('mongoose');
-
-const port = 8000;
+const port = 8001;
 const app = express();
+require('dotenv').config();
 
 // Connect to MongoDB
-connect("mongodb://localhost:27017/app_database")
+const mongoURI = process.env.MONGODB_URI;
+connect(mongoURI)
     .then(() => console.log("MongoDB connected"))
     .catch(err => console.error("MongoDB connection error:", err));
 
@@ -27,8 +28,23 @@ app.use(json());
 // Get all users
 app.get('/users', async (req, res) => {
     try {
-        const users = await User.find().sort({id:1});
-        res.json(users);
+        const userId = req.query.id;
+        if(userId){
+            const user = await User.findOne({ id: userId });
+            if(!user){
+                return res.status(404).json({ error: "User not found" });
+            }
+            res.json(user);
+        }
+        else{
+            const user = await User.find().sort({id:1});
+            const html = `
+                <ul>
+                    <li>${user.map(user => `<li>${user.name}</li>`).join('')}</li>
+                </ul>
+            `
+            res.send(html);
+        }
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch users" });
     }
@@ -41,6 +57,15 @@ app.get('/', (req, res) => {
         "message": "Welcome to the API!"
     });
 });
+
+app.post('/users', (req, res) => {
+    const user = new User(req.body);
+
+    user.save()
+        .then(savedUser => res.status(201).json(savedUser))  // Respond with 201 Created
+        .catch(error => res.status(400).json({ error: error.message }));  // Respond with 400 Bad Request
+});
+
 
 // POST to process data
 app.post('/', (req, res) => {
@@ -62,3 +87,5 @@ app.post('/', (req, res) => {
 
 // Start the server
 app.listen(port, () => console.log(`Server running on port ${port}`));
+
+module.exports = app;
