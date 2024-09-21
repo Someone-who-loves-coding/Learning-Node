@@ -21,6 +21,7 @@ const UserSchema = new Schema({
 
 const User = model('User', UserSchema);
 
+//MiddleWare
 app.use(json());
 
 // Get all users
